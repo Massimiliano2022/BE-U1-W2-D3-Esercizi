@@ -7,6 +7,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Scanner;
 
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
@@ -23,20 +24,73 @@ public class RegistroPresenze {
 		Map<String, Integer> mapWritingFile = new HashMap<>();
 		Map<String, Integer> mapReadingFromFile = new HashMap<>();
 
-		mapWritingFile.put("Mario Rossi", 140);
-		mapWritingFile.put("Giuseppe Verdi", 90);
-		mapWritingFile.put("Andrea Giordano", 75);
-		mapWritingFile.put("Giovanni Storti", 200);
-		mapWritingFile.put("Aldo Baglio", 500);
-		mapWritingFile.put("Giacomino Poretti", 900);
+		Scanner scanner = new Scanner(System.in);
 
-		scriviFileRegistro(mapWritingFile, file);
+		int input;
+		boolean runApplication = true;
 
-		mapReadingFromFile = leggiDatiFile(file);
+		while (runApplication) {
+			System.out.println("****REGISTRO PRESENZE****");
+			System.out.println("Quale operazione intendi eseguire?");
+			System.out.println("1 - per aggiungere un nuovo dato;");
+			System.out.println("2 - visualizzare i dati presenti nel registro;");
+			System.out.println("3 - cancellare il file registro presenze");
+			System.out.println("0 - per terminare");
 
-		stampaMapReadingFromFile(mapReadingFromFile);
+			input = scanner.nextInt();
 
-		// file.delete();
+			switch (input) {
+			case 1:
+				inserisciDatiRegistro(mapWritingFile, scanner);
+				scriviFileRegistro(mapWritingFile, file);
+				break;
+			case 2:
+				mapReadingFromFile = leggiDatiFile(file);
+				stampaMapReadingFromFile(mapReadingFromFile);
+				break;
+			case 3:
+				// mapReadingFromFile = leggiDatiFile(file);
+				eliminaDatiMapReadingFromFile(mapWritingFile, mapReadingFromFile, file);
+				break;
+			case 0:
+				runApplication = false;
+				logger.info("Termino l'applicazione.");
+				break;
+			default:
+				logger.info("Inserisci un input valido!");
+				break;
+			}
+		}
+
+		scanner.close();
+
+	}
+
+	private static void inserisciDatiRegistro(Map<String, Integer> mapWritingFile, Scanner scanner) {
+
+		scanner.nextLine();
+
+		String nomeDipendente;
+		int orePresenza = 0;
+
+		do {
+			System.out.println("Inserisci nome e cognome dipendente:");
+			nomeDipendente = scanner.nextLine();
+			if (nomeDipendente.equals("")) {
+				logger.error("Inserisci il nome del DIPENDENTE!");
+			}
+		} while (nomeDipendente.equals(""));
+
+		do {
+			System.out.println("Inserisci le ore di presenza per il dipendente:");
+			orePresenza = scanner.nextInt();
+			if (orePresenza == 0 || orePresenza < 0) {
+				logger.error("Non puoi inserire VALORI NEGATIVI per le ore di presenza!");
+			}
+		} while (orePresenza == 0 || orePresenza < 0);
+
+		mapWritingFile.put(nomeDipendente, orePresenza);
+
 	}
 
 	private static void scriviFileRegistro(Map<String, Integer> registro, File file) {
@@ -47,13 +101,14 @@ public class RegistroPresenze {
 
 			Map.Entry<String, Integer> entry = i.next();
 
-			String dato = entry.getKey() + "@" + entry.getValue() + "#";
+			String presenza = entry.getKey() + "@" + entry.getValue() + "#";
 
 			try {
-				FileUtils.writeStringToFile(file, dato + System.lineSeparator(), "UTF-8", true);
+				FileUtils.writeStringToFile(file, presenza + System.lineSeparator(), "UTF-8", true);
 			} catch (IOException e) {
-				logger.error("Errore in scrittura file registro.");
+				// e.printStackTrace();
 				logger.error(e.getMessage());
+				logger.error("Errore in scrittura file registro.");
 			}
 
 		}
@@ -63,17 +118,23 @@ public class RegistroPresenze {
 
 		Map<String, Integer> registroInScrittura = new HashMap<>();
 
-		try {
-			List<String> contents = FileUtils.readLines(file, "UTF-8");
-			for (String line : contents) {
-				String[] datoPresenza = line.split("@|#");
-				String nome = datoPresenza[0];
-				int presenze = Integer.parseInt(datoPresenza[1]);
-				registroInScrittura.put(nome, presenze);
+		if (file.exists()) {
+
+			try {
+				List<String> contents = FileUtils.readLines(file, "UTF-8");
+				for (String line : contents) {
+					String[] datoPresenza = line.split("@|#");
+					String nome = datoPresenza[0];
+					int presenze = Integer.parseInt(datoPresenza[1]);
+					registroInScrittura.put(nome, presenze);
+				}
+			} catch (IOException e) {
+				// e.printStackTrace();
+				logger.error(e.getMessage());
+				logger.error("FILE NON TROVATO!");
 			}
-		} catch (IOException e) {
-			logger.error(e.getMessage());
-			logger.error("FILE NON TROVATO!");
+		} else {
+			logger.info("Il file deve essere generato.");
 		}
 
 		return registroInScrittura;
@@ -91,4 +152,19 @@ public class RegistroPresenze {
 
 		}
 	}
+
+	private static void eliminaDatiMapReadingFromFile(Map<String, Integer> mapWritingFile,
+			Map<String, Integer> mapReadingFromFile, File file) {
+
+		mapWritingFile.clear();
+		mapReadingFromFile.clear();
+
+		if (file.exists()) {
+			file.delete();
+		} else {
+			logger.info("File non presente. Genera un nuovo file registro presenze.");
+		}
+
+	}
+
 }
